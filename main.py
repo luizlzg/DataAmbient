@@ -24,13 +24,13 @@ from PIL import Image, ImageFile
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-broker = '34.125.226.239'
+broker = 'broker.emqx.io'
 port = 1883
 topic = "data_ambient/iot/device_image"
 topic2 = "iot/dashboard"
 client_id = f'python-mqtt-luizg'
-username = 'projetoiot'
-password = 'projetoiot'
+username = 'emqx'
+password = 'public'
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 mtcnn = MTCNN(device=device)
