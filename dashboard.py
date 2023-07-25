@@ -14,7 +14,7 @@ topic = "data_ambient/iot/device_image"
 topic2 = "iot/dashboard"
 client_id = f'python-mqtt-luizg77'
 username = 'emqx'
-password = 'public
+password = 'public'
 
 qtd_anterior = 0.
 tempo_p_anterior = 0.
