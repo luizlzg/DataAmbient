@@ -1,0 +1,12 @@
+numpy
+pandas
+keras
+tensorflow
+plotly
+paho-mqtt
+streamlit_extras
+pillow
+matplotlib
+facenet-pytorch
+torch
+opencv-python
