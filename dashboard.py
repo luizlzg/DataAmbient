@@ -8,13 +8,13 @@ from streamlit_extras.metric_cards import style_metric_cards
 import datetime
 import json
 
-broker = '34.125.226.239'
+broker = 'broker.emqx.io'
 port = 1883
 topic = "data_ambient/iot/device_image"
 topic2 = "iot/dashboard"
 client_id = f'python-mqtt-luizg77'
-username = 'projetoiot'
-password = 'projetoiot'
+username = 'emqx'
+password = 'public
 
 qtd_anterior = 0.
 tempo_p_anterior = 0.
