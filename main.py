@@ -1,201 +1,107 @@
 from paho.mqtt import client as mqtt_client
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-import io
-import base64
-from numpy.linalg import norm
-import torch
-from facenet_pytorch import MTCNN, InceptionResnetV1
-from gender_age_detection import *
-import cv2
-import time
-import datetime
-import pandas as pd
 import json
-import pickle
-from utils import *
+from data_ambient import *
 
-import warnings
+# definindo as configurações do MQTT
 
-warnings.filterwarnings("ignore", category=RuntimeWarning)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from PIL import Image, ImageFile
-
-ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-broker = 'broker.emqx.io'
-port = 1883
-topic = "data_ambient/iot/device_image"
-topic2 = "iot/dashboard"
-client_id = f'python-mqtt-luizg'
-username = 'emqx'
-password = 'public'
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-mtcnn = MTCNN(device=device)
-resnet = InceptionResnetV1(pretrained='vggface2', device=device).eval()
-age_m = Age_Model()
-gender_m = Gender_Model()
-
-id_people = dict()
-
-id_rec = dict()
-
-events = []
-
-qtd_recorrentes = 0
-
-on_ambient = []
-
-possiveis_recorrentes = []
-
-tempo_permanencia = []
-
-tempo_recorrencia = []
-
-gender = None
-age = None
+broker = 'broker.emqx.io' # endereço do broker
+port = 1883 # porta do broker
+topic = "data_ambient/iot/device_image" # 1º tópico: responsável por captar as imagens da webcam
+topic2 = "iot/dashboard" # 2º tópico: responsável por enviar os dados para o dashboard
+client_id = f'python-mqtt-luizg' # pode colocar qualquer coisa
+username = 'emqx' # usuário do broker
+password = 'public' # senha do broker
 
 
+# definindo o objeto DataAmbient, responsável por registrar as movimentações no ambiente
+dta = DataAmbient()
+
+
+# função que conecta o dispositivo ao broker MQTT
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
             print("Connected to MQTT Broker!")
+            client.subscribe(topic)
         else:
             print("Failed to connect, return code %d\n", rc)
 
-    # Set Connecting Client ID
+    # Conectando o dispositivo:
     client = mqtt_client.Client(client_id)
     client.username_pw_set(username, password)
     client.on_connect = on_connect
     client.connect(broker, port)
     return client
 
-
+# função responsável por publicar os dados captados pelo objeto DataAmbient. Esses dados publicados servirão para a criação do dashboard
 def publish(client):
-    global qtd_recorrentes
-    global gender
-    global age
 
-    dados = {'qtd_pessoas': len(on_ambient), 'tempo_p': np.mean(tempo_permanencia),
-             'tempo_r': np.mean(tempo_recorrencia), 'recorrentes': qtd_recorrentes, 'genero': gender, 'idade': age}
-    json_data = json.dumps(dados)
-    result = client.publish(topic2, json_data)
+    qtd_pessoas, tempo_p, tempo_r, qtd_recorrentes, gender, age = dta.get_data() # obtendo os dados do objeto DataAmbient, com base no que ele registrou
+
+    # passando os dados para uma estrutura de dicionário
+    dados = {'qtd_pessoas': qtd_pessoas, 'tempo_p': tempo_p,
+             'tempo_r': tempo_r, 'recorrentes': qtd_recorrentes, 'genero': gender, 'idade': age}
+
+    
+    json_data = json.dumps(dados) # criando um json dos dados
+    result = client.publish(topic2, json_data) # publicando os dados
+
+    # analisando se os dados foram publicados com sucesso
     status = result[0]
     if status != 0:
         print(f"Failed to send message to topic {topic2}")
 
-
+# função que realiza a inscrição do dispositivo para receber as imagens da webcam
 def subscribe(client: mqtt_client):
+    # função que faz o processamento da imagem recebida
     def on_message(client, userdata, msg):
 
-        global qtd_recorrentes
-        global gender
-        global age
 
-        try:
-            frame, _ = img_to_numpy(msg)
-            face, conf = mtcnn(frame, return_prob=True)
-        except:
-            _, img = img_to_numpy(msg)
-            face, conf = mtcnn(np.array(img), return_prob=True)
+        face, conf = dta.extract_face(msg) # extraindo a face e seu nível de confiança da imagem
 
-        print(f"Conf:{conf}")
+        print(f"Conf:{conf}") # imprimindo a confiança na tela
+
+        # verificando se a confiança não é do tipo "None". Caso seja, é porque nenhuma face foi detectada
         if isinstance(conf, type(None)):
             conf = 0
-        if conf >= 0.95:
-            scores = []
-            if len(face) != 0:
-                #img_cropped = cv2.resize(img_cropped1, (224, 224))
-                #img_cropped = multi_scale_retinex(img_cropped, [15, 80, 250])
-                embedding = get_face_embedding_rt(face, resnet, device)
-        else:
+
+        # verificando se há mais de 95% de confiança na detecção da face. Caso não tenha, a imagem é descartada
+        if conf < 0.95:
             return
-
-        if len(id_people) == 0:
+            
+        # verificando se o objeto Data Ambient está vazio, ou seja, se ninguém nunca visitou aquele ambiente:
+        if dta.is_empty:
             if len(face) != 0:
-                id_people[0] = embedding
-                id_rec[0] = 1
+                dta.register_and_entry() # caso ninguem nunca tenha visitado o ambiente, é armazenado o registro da pessoa e sua entrada
+                dta.is_empty = False
+                publish(client) # publicando os dados no dashboard
 
-                img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                cv2.imwrite('images/0.jpg', img)
-
-                events.append([0, datetime.datetime.now(), 1, 1, 0, np.nan, np.nan])
-                on_ambient.append(0)
-                gender = find_gender(face.permute(1,2,0).cpu().detach().numpy(), gender_m)
-                age = find_age(face.permute(1,2,0).cpu().detach().numpy(), age_m)
-                publish(client)
-
+        # caso o objeto Data Ambient não esteja vazio, ou seja, se alguma pessoa já visitou o ambiente:
         else:
-            for key, value in id_people.items():
-                scores.append(cosine_similarity(embedding, value))
 
-            scores = np.array(scores)
-            print(scores)
-            min_value = np.min(scores)
-            #max_value = np.max(scores)
+            scores = np.array(dta.search_faces(face)) # fazendo uma busca por todas as faces armazenadas e retornando uma lista com a distância da face atual para as facas armazenadas
+            print(scores) # imprimindo na tela a lista de distâncias
+            min_value = np.min(scores) # extraindo a menor distância da lista
 
-            if round(min_value, 2) <= 0.4:
+            # caso a menor distância seja menor ou igual a 0.4, quer dizer que aquela pessoa já visitou o ambiente:
+            if min_value <= 0.4:
 
+                # extraindo a identificação da pessoa que já visitou o ambiente
                 ident = np.argmin(scores)
-                #ident = np.argmax(scores)
-                for j in range(len(events), -1, -1):
+                
+                changes = dta.update_env(ident) # atualizando o objeto DataAmbient, analisando se a pessoa está entrando ou saindo e captando as outras informações
+                if changes:
+                    publish(client) # publicando os dados no dashboard
+                return
 
-                    if events[j - 1][0] == ident:
-
-                        atual = datetime.datetime.now()
-
-                        dif = atual - events[j - 1][1]
-
-                        if dif.total_seconds() >= 15 and events[j - 1][3] == 1:
-
-                            events.append([ident, atual, 0, 0, 1, dif.total_seconds(), np.nan])
-                            tempo_permanencia.append(dif.total_seconds())
-                            gender = -1
-                            age = -1
-                            on_ambient.remove(ident)
-                            try:
-                                id_rec[str(ident)] += 1
-                            except KeyError:
-                                id_rec[ident] += 1
-
-                            if ident in possiveis_recorrentes:
-                                qtd_recorrentes -= 1
-                            else:
-                                possiveis_recorrentes.append(ident)
-                            publish(client)
-
-                            return
-                        elif dif.total_seconds() >= 15 and events[j - 1][3] == 0:
-
-                            events.append([ident, atual, 0, 1, 0, np.nan, dif.total_seconds()])
-                            tempo_recorrencia.append(dif.total_seconds())
-                            on_ambient.append(ident)
-                            gender = find_gender(face.permute(1,2,0).cpu().detach().numpy(), gender_m)
-                            age = find_age(face.permute(1,2,0).cpu().detach().numpy(), age_m)
-                            if ident in possiveis_recorrentes:
-                                qtd_recorrentes += 1
-                            publish(client)
-                            return
-                        else:
-                            return
-                    else:
-                        continue
+            # caso a menor distância não seja menor ou igual a 0.4, quer dizer que há uma nova pessoa visitando o ambiente:
             else:
                 if len(face) != 0:
                     
-                    gender = find_gender(face.permute(1,2,0).cpu().detach().numpy(), gender_m)
-                    age = find_age(face.permute(1,2,0).cpu().detach().numpy(), age_m)
-                    
-                    id_rec[len(id_people)] = 1
-                    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    cv2.imwrite(f'images/{len(id_people)}.jpg', img)
-                    id_people[len(id_people)] = embedding
-
-                    events.append([len(id_people) - 1, datetime.datetime.now(), 1, 1, 0, np.nan, np.nan])
-                    on_ambient.append(len(id_people) - 1)
-                    publish(client)
+                    dta.register_new_person() # registrando uma nova pessoa no objeto DataAmbient
+                    publish(client) # publicando os dados no dashboard
+                    return
 
     client.subscribe(topic)
     client.on_message = on_message
@@ -203,8 +109,11 @@ def subscribe(client: mqtt_client):
 
 def run():
     client = connect_mqtt()
-    subscribe(client)
-    client.loop_forever()
+    try:
+        subscribe(client)
+        client.loop_forever()
+    except Exception as e:
+        print(e)
 
 
 if __name__ == '__main__':
