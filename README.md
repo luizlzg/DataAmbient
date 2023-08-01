@@ -19,7 +19,9 @@ gender_age_detection.py: é o arquivo em que se encontram as redes neurais respo
 
 utils.py: contém algumas funções utilitárias que são aproveitadas nos outros arquivos.
 
-main.py: é o código principal a ser executado. Esse código é o que vai receber a imagem da câmera, calcular as métricas, classificar gênero e idade e enviar isso para o dashboard.
+data_ambient.py: responsável pela classe que realiza todo o processamento da imagem e cálculo das métricas. Esse código é o que vai calcular as métricas, classificar gênero e idade.
+
+main.py: é o código principal a ser executado. É o código que vai receber a imagem, direcionar para o processamento e enviar o retorno para o dashboard.
 
 webcam.py: é o código responsável por captar a imagem da webcam e enviar para o código principal.
 
