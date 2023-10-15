@@ -24,10 +24,26 @@ def process_image(img, mtcnn, resnet, device):
         faces_returned = [faces[i] for i in indices]
         return True, faces_returned
 
+
 # Função para converter a coluna 'embedding' em um array NumPy
 def convert_embedding(embedding):
+    """
+    Essa função converte o embedding, que está no formato de bytes, para um array NumPy.
+    :param embedding: bytes
+    :return: np.array
+    """
     return np.frombuffer(embedding, dtype=np.float32)
+
+
 def search_face(embedding, db):
+    """
+    Essa função faz uma busca semântica no banco de dados, comparando o embedding da face detectada com os embeddings
+    de todas as faces cadastradas no banco de dados. A face com menor distância é a que mais se assemelha à face
+    detectada.
+    :param embedding:
+    :param db:
+    :return:
+    """
     query = "SELECT user_id, embedding FROM users"
 
     df = pd.read_sql_query(query, db)
@@ -35,6 +51,7 @@ def search_face(embedding, db):
     id_people = dict(zip(df['user_id'], df['embedding']))
 
     if len(id_people) == 0:
+        # TODO: entender o que é isso aqui
         return 100, None
 
     scores = []

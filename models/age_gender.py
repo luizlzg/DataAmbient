@@ -158,6 +158,12 @@ def Gender_Model(url='https://github.com/serengil/deepface_models/releases/downl
 
 
 def find_age(np_img, agemodel):
+    """
+    Essa função recebe uma imagem e retorna a idade da pessoa na imagem.
+    :param np_img:
+    :param agemodel:
+    :return: 0 - jovem, 1 - adulto, 2 - idoso
+    """
     current_img = np.expand_dims(np_img.permute(1, 2, 0).cpu().detach().numpy(), axis=0)
     pred = np.argmax(agemodel.predict(current_img, verbose=0))
     age_labels = ["Jovem", "Adulto", "Idoso"]
@@ -166,6 +172,12 @@ def find_age(np_img, agemodel):
 
 
 def find_gender(np_img, gender_model):
+    """
+    Essa função recebe uma imagem e retorna o gênero da pessoa na imagem.
+    :param np_img:
+    :param gender_model:
+    :return: 0 - feminino, 1 - masculino
+    """
     current_img = cv2.resize(np_img.permute(1, 2, 0).cpu().detach().numpy(), (224, 224))
     current_img = np.expand_dims(current_img, axis=0)
     gender_predictions = gender_model.predict(current_img, verbose=0)[0, :]
