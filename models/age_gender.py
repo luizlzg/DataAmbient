@@ -156,7 +156,6 @@ def Gender_Model(url='https://github.com/serengil/deepface_models/releases/downl
 
 # --------------------------
 
-
 def find_age(np_img, agemodel):
     """
     Essa função recebe uma imagem e retorna a idade da pessoa na imagem.
