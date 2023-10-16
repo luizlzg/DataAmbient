@@ -11,7 +11,7 @@ def get_image_from_camera():
     pass
 
 
-def process_image(img, mtcnn, resnet, device):
+def process_image(img, mtcnn, resnet):
     faces, probs = mtcnn(img, return_prob=True)
     if probs[0] is None:
         return False, None
@@ -33,37 +33,6 @@ def convert_embedding(embedding):
     :return: np.array
     """
     return np.frombuffer(embedding, dtype=np.float32)
-
-
-def search_face(embedding, db):
-    """
-    Essa função faz uma busca semântica no banco de dados, comparando o embedding da face detectada com os embeddings
-    de todas as faces cadastradas no banco de dados. A face com menor distância é a que mais se assemelha à face
-    detectada.
-    :param embedding:
-    :param db:
-    :return:
-    """
-    query = "SELECT user_id, embedding FROM users"
-
-    df = pd.read_sql_query(query, db)
-    df['embedding'] = df['embedding'].apply(convert_embedding)
-    id_people = dict(zip(df['user_id'], df['embedding']))
-
-    if len(id_people) == 0:
-        # TODO: entender o que é isso aqui
-        return 100, None
-
-    scores = []
-    ids = []
-
-    for key, value in id_people.items():
-        scores.append(cosine_similarity(embedding, value))
-        ids.append(key)
-
-    idx = scores.index(min(scores))
-
-    return scores[idx], ids[idx]
 
 
 def get_face_embedding_rt(img_cropped, resnet, device):
