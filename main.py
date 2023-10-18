@@ -10,7 +10,6 @@ import uuid
 
 warnings.filterwarnings("ignore")
 
-
 # --------------------------------------------------------- verificando e criando os diretórios necessários
 if not os.path.exists('./weights'):
     print(f"O diretório 'weights' não existe. Criando...")
@@ -38,11 +37,14 @@ if not os.path.exists('./images_camera'):
     except Exception as e:
         print(f"Não foi possível criar o diretório 'images_camera'. Erro: {e}")
         exit(1)
+
+
 # ---------------------------------------------------------
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
 class Camera:
-    def __init__(self, ip_bool=True, camera_ip="192.168.100.198", porta_rtsp="554", usuario="admin", senha="DataAmbient777"):
+    def __init__(self, ip_bool=True, camera_ip="192.168.100.198", porta_rtsp="554", usuario="admin",
+                 senha="DataAmbient777"):
         if ip_bool:
             self.ip_bool = ip_bool
             # declarando as variáveis de conexão com a câmera
@@ -76,12 +78,14 @@ class Camera:
         v = cv2.VideoCapture(camera_id)
         print("Câmera inicializada!")
         return v
+
+
 # ---------------------------------------------------------
 
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
 class AgeGenderInference:
-    def __init__(self, ):
+    def __init__(self, camera_ip=True):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # declarando os modelos a serem utilizados
         self.mtcnn = MTCNN(device=self.device, keep_all=True)
@@ -92,7 +96,10 @@ class AgeGenderInference:
         self.camera = Camera()
         self.db = Database()
         # inicializando as conexoes
-        self.v = self.camera.connect_local()  # TROCAR PARA IP CASO PRECISE
+        if camera_ip:
+            self.v = self.camera.connect_ip()
+        else:
+            self.v = self.camera.connect_local()  # TROCAR PARA IP CASO PRECISE
         self.db.connect()
 
     def capture_video(self):
@@ -164,5 +171,5 @@ class AgeGenderInference:
 
 
 if __name__ == '__main__':
-    agi = AgeGenderInference()
+    agi = AgeGenderInference(camera_ip=False)
     agi.main()
