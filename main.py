@@ -43,7 +43,7 @@ if not os.path.exists('./images_camera'):
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
 class Camera:
-    def __init__(self, ip_bool=True, camera_ip="192.168.100.198", porta_rtsp="554", usuario="admin",
+    def __init__(self, ip_bool=True, camera_ip="192.168.2.34", porta_rtsp="554", usuario="admin",
                  senha="DataAmbient777"):
         if ip_bool:
             self.ip_bool = ip_bool
@@ -85,7 +85,7 @@ class Camera:
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
 class AgeGenderInference:
-    def __init__(self, camera_ip=True):
+    def __init__(self, camera_ip=True, save_image=True):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # declarando os modelos a serem utilizados
         self.mtcnn = MTCNN(device=self.device, keep_all=True)
@@ -95,6 +95,7 @@ class AgeGenderInference:
         # conectando outras classes
         self.camera = Camera()
         self.db = Database()
+        self.save_image = save_image
         # inicializando as conexoes
         if camera_ip:
             self.v = self.camera.connect_ip()
@@ -106,9 +107,6 @@ class AgeGenderInference:
         # capturando as imagens da câmera
         ret, img = self.v.read()
         if not ret:
-            return False, None
-        cv2.imshow('frame', img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
             return False, None
         return True, img
 
@@ -133,10 +131,11 @@ class AgeGenderInference:
             self.db.add_event(user_id, user_info['gender'], user_info['age_range'], datetime.now())
             print("Informação inserida no banco com sucesso!")
 
-            # salvando imagem e face
-            cv2.imwrite(f'images_camera/{user_id}.jpg', img)
-            cv2.imwrite(f'faces/{user_id}.jpg',
-                        (face.permute(1, 2, 0).cpu().detach().numpy() * 255).astype(np.uint8))
+            if self.save_image:
+                # salvando imagem e face
+                cv2.imwrite(f'images_camera/{user_id}.jpg', img)
+                cv2.imwrite(f'faces/{user_id}.jpg',
+                            (face.permute(1, 2, 0).cpu().detach().numpy() * 255).astype(np.uint8))
 
         else:
             # se não encontrar uma face semelhante, adiciona uma nova face no banco de dados e extrai as info
@@ -147,29 +146,38 @@ class AgeGenderInference:
             self.db.add_event(id, genero, faixa_etaria, datetime.now())
             print("Informação inserida no banco com sucesso!")
 
-            # salvando imagem e face
-            cv2.imwrite(f'images_camera/{user_id}.jpg', img)
-            cv2.imwrite(f'faces/{user_id}.jpg',
-                        (face.permute(1, 2, 0).cpu().detach().numpy() * 255).astype(np.uint8))
+            if self.save_image:
+                # salvando imagem e face
+                cv2.imwrite(f'images_camera/{user_id}.jpg', img)
+                cv2.imwrite(f'faces/{user_id}.jpg',
+                            (face.permute(1, 2, 0).cpu().detach().numpy() * 255).astype(np.uint8))
 
     def main(self):
+        frame_count = 0
         while True:
             capturado, img = self.capture_video()
+            frame_skip_factor = 10
+
+            # Pula frames até que o contador atinja o fator de frame skipping
             if not capturado:
                 break
-            # verificando se há faces na imagem
-            has_face, faces = process_image(img, self.mtcnn, self.resnet)
 
-            # se não houver nenhuma face, continua para a próxima imagem
-            if not has_face:
-                continue
+            frame_count += 1
 
-            # se tiver faces, itera sobre elas e...
-            else:
-                for face in faces:
-                    self.get_info_from_face(face, img)
+            if frame_count % frame_skip_factor == 0:
+                # verificando se há faces na imagem
+                has_face, faces = process_image(img, self.mtcnn, self.resnet)
+
+                # se não houver nenhuma face, continua para a próxima imagem
+                if not has_face:
+                    continue
+
+                # se tiver faces, itera sobre elas e...
+                else:
+                    for face in faces:
+                        self.get_info_from_face(face, img)
 
 
 if __name__ == '__main__':
-    agi = AgeGenderInference(camera_ip=False)
+    agi = AgeGenderInference(camera_ip=True, save_image=False)
     agi.main()
