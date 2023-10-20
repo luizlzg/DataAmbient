@@ -1,4 +1,6 @@
 from datetime import datetime
+
+import psycopg2
 import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from models.age_gender import *
@@ -175,9 +177,13 @@ class AgeGenderInference:
                 # se tiver faces, itera sobre elas e...
                 else:
                     for face in faces:
-                        self.get_info_from_face(face, img)
+                        try:
+                            self.get_info_from_face(face, img)
+                        except:
+                            self.db.connect()
+                            self.get_info_from_face(face, img)
 
 
 if __name__ == '__main__':
-    agi = AgeGenderInference(camera_ip=True, save_image=False)
+    agi = AgeGenderInference(camera_ip=False, save_image=False)
     agi.main()
