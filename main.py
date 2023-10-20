@@ -1,5 +1,8 @@
 from datetime import datetime
-
+import socket
+import cv2
+import pickle
+import struct
 import psycopg2
 import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
@@ -87,7 +90,7 @@ class Camera:
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
 class AgeGenderInference:
-    def __init__(self, camera_ip=True, save_image=True):
+    def __init__(self, save_image=True):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         # declarando os modelos a serem utilizados
         self.mtcnn = MTCNN(device=self.device, keep_all=True)
@@ -99,10 +102,7 @@ class AgeGenderInference:
         self.db = Database()
         self.save_image = save_image
         # inicializando as conexoes
-        if camera_ip:
-            self.v = self.camera.connect_ip()
-        else:
-            self.v = self.camera.connect_local()  # TROCAR PARA IP CASO PRECISE
+        self.v = self.camera.connect_local()  # TROCAR PARA IP CASO PRECISE
         self.db.connect()
 
     def capture_video(self):
@@ -156,14 +156,35 @@ class AgeGenderInference:
 
     def main(self):
         frame_count = 0
+
+        # Configura o endereço e a porta do servidor
+        host = '0.0.0.0'  # Ou o IP público do computador de destino
+        port = 10629
+
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((host, port))
+        server_socket.listen(1)
+
+        print(f"Servidor esperando conexão em {host}:{port}")
+
+        client_socket, client_address = server_socket.accept()
+        print(f"Conexão estabelecida com {client_address}")
+
+        data = b""
+        payload_size = struct.calcsize("Q")
         while True:
-            capturado, img = self.capture_video()
+            while len(data) < payload_size:
+                data += client_socket.recv(4 * 1024)
+            packed_msg_size = data[:payload_size]
+            data = data[payload_size:]
+            msg_size = struct.unpack("Q", packed_msg_size)[0]
+            while len(data) < msg_size:
+                data += client_socket.recv(4 * 1024)
+            frame_data = data[:msg_size]
+            data = data[msg_size:]
+
+            img = pickle.loads(frame_data)
             frame_skip_factor = 10
-
-            # Pula frames até que o contador atinja o fator de frame skipping
-            if not capturado:
-                break
-
             frame_count += 1
 
             if frame_count % frame_skip_factor == 0:
@@ -185,5 +206,5 @@ class AgeGenderInference:
 
 
 if __name__ == '__main__':
-    agi = AgeGenderInference(camera_ip=False, save_image=False)
+    agi = AgeGenderInference(save_image=False)
     agi.main()
