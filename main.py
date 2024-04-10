@@ -16,14 +16,14 @@ import uuid
 warnings.filterwarnings("ignore")
 
 # --------------------------------------------------------- verificando e criando os diretórios necessários
-if not os.path.exists('./weights'):
-    print(f"O diretório 'weights' não existe. Criando...")
-    try:
+#if not os.path.exists('./weights'):
+    #print(f"O diretório 'weights' não existe. Criando...")
+    #try:
         # criando o diretório de logs
-        os.makedirs('./weights')
-    except Exception as e:
-        print(f"Não foi possível criar o diretório 'weights'. Erro: {e}")
-        exit(1)
+        #os.makedirs('./weights')
+    #except Exception as e:
+        #print(f"Não foi possível criar o diretório 'weights'. Erro: {e}")
+        #exit(1)
 
 if not os.path.exists('./faces'):
     print(f"O diretório 'faces' não existe. Criando...")
