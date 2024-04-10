@@ -26,4 +26,15 @@ Execute o código principal:
 
 Em um terminal separado, execute o código que irá obter as imagens da câmera e enviar para o processamento local:
 
-<código ainda será feito>
+	python3 run_camera.py
+
+OBS: o código acima é um exemplo de como rodar a câmera, mas ainda não foi testado.
+
+
+# Obtendo a quantidade de pessoas
+
+No repositório há um exemplo de como se conectar ao banco de dados e executar a query que irá retornar a quantidade de pessoas. Execute:
+
+	python3 printar_qtd_pessoas.py
+
+Este é apenas um código de exemplo e para testar o desempenho da ferramenta, visto que a exibição da quantidade de pessoas será feita no dashboard.
