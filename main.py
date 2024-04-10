@@ -89,6 +89,8 @@ class Camera:
 
 
 # --------------------------------------------------------- construindo classe para a captura de imagens e processamento
+
+# Essa classe é a principal responsável pela execução da ferramenta. Ela instancia a câmera, o banco de dados e as redes neurais responsáveis por captar o embedding da face.
 class AgeGenderInference:
     def __init__(self, save_image=True):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -142,8 +144,10 @@ class AgeGenderInference:
         else:
             # se não encontrar uma face semelhante, adiciona uma nova face no banco de dados e extrai as info
             id = str(uuid.uuid1())
-            genero = -1
-            faixa_etaria = -1
+            genero = -1 # Definindo gênero como -1 já que não será utilizado.
+            faixa_etaria = -1 # Definindo faixa etária como -1 já que não será utilizado.
+
+            # Adicionando o usuário e o evento captado no banco de dados.
             self.db.add_user(id, embedding, genero, faixa_etaria, datetime.now(), datetime.now())
             self.db.add_event(id, genero, faixa_etaria, datetime.now())
             print("Informação inserida no banco com sucesso!")
@@ -161,6 +165,7 @@ class AgeGenderInference:
         host = '0.0.0.0'  # Ou o IP público do computador de destino
         port = 10629
 
+        # Abrindo uma conexão local para o recebimento das imagens
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((host, port))
         server_socket.listen(1)
@@ -170,9 +175,12 @@ class AgeGenderInference:
         client_socket, client_address = server_socket.accept()
         print(f"Conexão estabelecida com {client_address}")
 
+        # Iterando sobre os pacotes/imagens recebidos na conexão local...
         data = b""
         payload_size = struct.calcsize("Q")
         while True:
+
+            # Processando os pacotes recebidos e extraindo a imagem deles...
             while len(data) < payload_size:
                 data += client_socket.recv(4 * 1024)
             packed_msg_size = data[:payload_size]
@@ -183,8 +191,8 @@ class AgeGenderInference:
             frame_data = data[:msg_size]
             data = data[msg_size:]
 
-            img = pickle.loads(frame_data)
-            frame_skip_factor = 10
+            img = pickle.loads(frame_data) # Transformando os bytes recebidos em um objeto de imagem...
+            frame_skip_factor = 10 # Define o fator de frame skipping (por exemplo, 10 significa pular a cada 10º frame)
             frame_count += 1
 
             if frame_count % frame_skip_factor == 0:
