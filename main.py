@@ -6,7 +6,7 @@ import struct
 import psycopg2
 import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
-from models.age_gender import *
+#from models.age_gender import *
 from database.database import Database
 from processing.image_process import *
 import warnings
@@ -95,8 +95,8 @@ class AgeGenderInference:
         # declarando os modelos a serem utilizados
         self.mtcnn = MTCNN(device=self.device, keep_all=True)
         self.resnet = InceptionResnetV1(pretrained='vggface2', device=self.device).eval()
-        self.age_m = Age_Model()
-        self.gender_m = Gender_Model()
+        #self.age_m = Age_Model()
+        #self.gender_m = Gender_Model()
         # conectando outras classes
         self.camera = Camera()
         self.db = Database()
@@ -142,8 +142,8 @@ class AgeGenderInference:
         else:
             # se não encontrar uma face semelhante, adiciona uma nova face no banco de dados e extrai as info
             id = str(uuid.uuid1())
-            genero = find_gender(face, self.gender_m)
-            faixa_etaria = find_age(face, self.age_m)
+            genero = -1
+            faixa_etaria = -1
             self.db.add_user(id, embedding, genero, faixa_etaria, datetime.now(), datetime.now())
             self.db.add_event(id, genero, faixa_etaria, datetime.now())
             print("Informação inserida no banco com sucesso!")
