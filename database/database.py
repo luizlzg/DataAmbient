@@ -5,6 +5,7 @@ from processing.image_process import cosine_similarity, convert_embedding
 
 
 class Database:
+    # Inicialização do banco de dados com as variáveis necessárias para fazer a conexão à ele.
     def __init__(self, db_name='p_counter', user='smartairuser', password='7cLjSM0AfIHAVCe',
                  host='smartair-user.coqfqdmu41ep.us-east-2.rds.amazonaws.com', port='5432'):
         self.db_name = db_name
@@ -15,6 +16,7 @@ class Database:
         self.db_object = None
         self.cursor = None
 
+    # Método para conectar ao banco de dados.
     def connect(self):
         try:
             # declarando o objeto do banco de dados a ser utilizado
@@ -24,6 +26,7 @@ class Database:
             print(f"Não foi possível conectar ao banco de dados. Erro: {eror}")
             exit(1)
 
+    # Método que conectar ao banco de dados e retorna o objeto referente à ele, que é necessário para realizar todas as manipulações no banco.
     def __connect_bd(self):
         db = psycopg2.connect(dbname=self.db_name,
                               user=self.user,
