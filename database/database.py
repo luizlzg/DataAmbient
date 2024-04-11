@@ -18,6 +18,7 @@ class Database:
 
     # Método para conectar ao banco de dados.
     def connect(self):
+        print("lucas")
         try:
             # declarando o objeto do banco de dados a ser utilizado
             self.db_object, self.cursor = self.__connect_bd()
@@ -37,6 +38,9 @@ class Database:
         cursor = db.cursor()
 
         return db, cursor
+    
+    def get_connection(self):
+        return self.__connect_bd()
 
     def get_user_info(self, id_: str):
         """
