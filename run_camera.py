@@ -4,7 +4,7 @@ import os
 from main import Camera
 
 # Configura o endereço e a porta do servidor de destino
-host = '35.188.222.230'  # Substitua pelo IP público ou nome de domínio do computador de destino
+host = 'localhost'  # Substitua pelo IP público ou nome de domínio do computador de destino
 port = 10629
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

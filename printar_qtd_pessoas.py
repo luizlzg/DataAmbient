@@ -1,7 +1,7 @@
 from database.database import *
 from time import sleep
 db = Database()
-db, cursor = db.__connect_bd()
+db, cursor = db.get_connection()
 print("Conectado ao banco de dados!")
 
 while True:
